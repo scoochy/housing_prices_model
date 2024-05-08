@@ -1,0 +1,170 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+
+housing_prices %>% 
+  ggplot(aes(x = year, y = housing_prices)) +
+  geom_line() + 
+  labs(title = "UK Housing Prices 2000-2017", y = "Housing Prices", x = "Year")+
+  theme_minimal() 
+
+```
+
+
+```{r}
+housing_prices %>% 
+  ggplot(aes(x = year, y = wages)) +
+  geom_line()
+```
+
+
+
+```{r}
+housing_prices %>% 
+  ggplot(aes(x = year, y = gdp_ph)) +
+  geom_line() + 
+  labs(title = "UK GDP per capita 2000-2017", y = "GDP", x = "Year")+
+  theme_minimal() 
+
+```
+
+```{r}
+housing_prices_data %>% 
+  ggplot(aes(x = year, y = rel_wealth)) +
+  geom_line() + 
+  labs(title = "UK GDP per capita 2000-2017", y = "GDP", x = "Year")+
+  theme_minimal() 
+
+```
+
+```{r}
+library(modelr)
+
+model_plot <- housing_prices_data %>% 
+  select(everything())
+
+model_plot <- model_plot%>% 
+  add_predictions(model2c) %>% 
+  add_residuals(model2c)
+```
+
+```{r}
+model_plot %>% 
+  ggplot(aes(x = year)) +
+  geom_point(aes(y = housing_prices)) +
+  geom_line(aes(y = pred), col = "red") + 
+  labs(title = "Housing Prices ~ GDP Model", y = "Housing Prices", x = "Year") +
+  theme_minimal() +
+  labs(caption = "Adjusted R-squared:  0.9322")
+```
+
+```{r}
+model_plot2 <- housing_prices_data %>% 
+  select(everything())
+
+model_plot2 <- model_plot2%>% 
+  add_predictions(model7) %>% 
+  add_residuals(model7)
+```
+
+```{r}
+model_plot2 %>% 
+  ggplot(aes(x = year)) +
+  geom_point(aes(y = housing_prices)) +
+  geom_line(aes(y = pred), col = "red") + 
+  labs(title = "Housing Prices ~ Money Supply + Wages + Relative Wealth (Wages / GDP), ", y = "Housing Prices", x = "Year") +
+  theme_minimal() +
+  labs(caption = "Adjusted R-squared:  0.9956")
+```
+```{r}
+bubble_data_all_viz <- bubble_data_all %>% 
+  select(-bubble) %>% 
+  add_row(bubble_data_pred_all)
+
+bubble_data_2022_viz <- bubble_data_all %>% 
+  select(-bubble) %>% 
+  add_row(bubble_data_pred_2022)
+
+```
+
+
+
+```{r}
+bubble_data_2022_viz %>% 
+  ggplot(aes(x = year, y = house_prices)) +
+  geom_line() +
+  labs(title = "Housing Prices % change year on year, ", y = "Housing Prices % change", x = "Year") +
+  theme_minimal() +
+  geom_hline(yintercept=0, linetype = "dotted") +
+  geom_vline(xintercept = c(1987, 1989, 2002, 2007), color = "red")+
+  geom_text(data=annotation, aes(x=c(1990, 2004.5), y=c(22, 22), label=c("Bubble Years 87-89", "Bubble Years 02-07")), color="red", size=3)
+```
+
+```{r}
+bubble_data_2022_viz %>% 
+  ggplot(aes(x = year, y = mortgage_ratio_wages)) +
+  geom_line() +
+  labs(title = "Proportion of wages spent on mortgage payments", y = "Proportion of wages", x = "Year") +
+  theme_minimal() +
+  geom_hline(yintercept=0, linetype = "dotted") +
+  geom_vline(xintercept = c(1987, 1989, 2002, 2007), color = "red") +
+  geom_text(data=annotation, aes(x=c(1990, 2004.5), y=c(0.5, 0.5), label=c("Bubble Years 87-89", "Bubble Years 02-07")), color="red", 
+           size=4)
+```
+
+```{r}
+bubble_data_2022_viz %>% 
+  ggplot(aes(x = year, y = house_price_ratio_wages)) +
+  geom_line() +
+  labs(title = "Housing Prices to wages ratio", y = "Housing Prices to wages ratio", x = "Year") +
+  theme_minimal() +
+  geom_hline(yintercept=0, linetype = "dotted") +
+  geom_vline(xintercept = c(1987, 1989, 2002, 2007), color = "red")+
+  geom_text(data=annotation, aes(x=c(1990, 2004.5), y=c(7, 7), label=c("Bubble Years 87-89", "Bubble Years 02-07")),                 , 
+           color="red", 
+           size=4)
+```
+
+```{r}
+bubble_data_2022_viz %>% 
+  ggplot(aes(x = year, y = houses_built)) + 
+  geom_line() +
+  labs(title = "Houses Built", y = "Houses Built", x = "Year") +
+  theme_minimal() +
+  geom_hline(yintercept=0, linetype = "dotted") +
+  geom_vline(xintercept = c(1987, 1989, 2002, 2007), color = "red")+
+  geom_text(data=annotation, aes(x=c(1990, 2004.5), y=c(7, 7), label=c("Bubble Years 87-89", "Bubble Years 02-07")),                 , 
+           color="red", 
+           size=4)
+```
+
+```{r}
+inflation <- read_csv("../raw data/inflation.csv")
+inflation <- inflation[176:582, ]
+
+inflation <- inflation %>% 
+  mutate(year = as.numeric(str_extract(Title, "^[0-9]{4}"))) %>% 
+  mutate(rate = as.numeric(`CPIH ANNUAL RATE 00: ALL ITEMS 2015=100`)) %>% 
+  group_by(year) %>%
+  summarise(average_inflation = mean(rate)) %>% 
+  select(year, average_inflation)
+```
+
+
+```{r}
+inflation %>% 
+  ggplot(aes(x = year, y = average_inflation)) +
+  geom_line() +
+  labs(title = "Average yearly inflation rate", y = "Inflation Rate %", x = "Year") +
+  theme_minimal() +
+  geom_hline(yintercept=0, linetype = "dotted") +
+  geom_vline(xintercept = c(1989, 2002, 2007), color = "red")+
+  geom_text(data=annotation, aes(x=c(1990, 2004.5), y=c(5, 5), label=c("Bubble Year 89", "Bubble Years 02-07")),                 , 
+           color="red", 
+           size=4)
+```
+

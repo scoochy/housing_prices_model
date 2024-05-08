@@ -1,0 +1,357 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+
+bubble_data_all <- read_csv(here::here("clean data/bubble_data.csv"))
+```
+
+```{r}
+bubble_data <- bubble_data_all %>% 
+  select(-year)
+```
+
+
+```{r}
+library(GGally)
+bubble_data %>% 
+  select(bubble, everything()) %>% 
+  ggpairs()
+```
+
+```{r}
+bubble_model1 <- glm(bubble ~ ., bubble_data, family = binomial(link = 'logit'))
+
+summary(bubble_model1)
+```
+
+```{r}
+library(broom)
+library(janitor)
+tidy_out <- clean_names(tidy(bubble_model1))
+
+tidy_out
+```
+
+
+```{r}
+bubble_model2 <- glm(bubble ~ house_prices, bubble_data, family = binomial(link = 'logit'))
+
+summary(bubble_model2)
+```
+
+
+```{r}
+bubble_model2a <- glm(bubble ~ mortgage_ratio_wages, bubble_data, family = binomial(link = 'logit'))
+
+summary(bubble_model2a)
+```
+
+
+
+```{r}
+bubble_model2b <- glm(bubble ~ house_prices + house_price_ratio_wages, bubble_data, family = binomial(link = 'logit'))
+
+summary(bubble_model2b)
+```
+
+```{r}
+bubble_model2c <- glm(bubble ~ house_prices + mortgage_ratio_wages, bubble_data, family = binomial(link = 'logit'))
+
+summary(bubble_model2c)
+```
+```{r}
+library(caret)
+train_control <- trainControl(method = "repeatedcv", 
+                              number = 5,
+                              repeats = 100,
+                              savePredictions = TRUE, 
+                              classProbs = TRUE, 
+                              summaryFunction = twoClassSummary)
+```
+
+```{r}
+
+bubble_data_test <- bubble_data %>% 
+  mutate(bubble = if_else(bubble == TRUE, "Yes", "No"))
+
+model_cv <- train(bubble ~ house_prices,
+               data = bubble_data_test,
+               trControl = train_control,
+               method = "glm",
+               family = binomial(link = 'logit'))
+```
+```{r}
+model_cv$results
+```
+
+
+
+
+```{r}
+bubble_model2c <- glm(bubble ~ house_prices + mortgage_interest, bubble_data, family = binomial(link = 'logit'))
+
+summary(bubble_model2c)
+```
+
+```{r}
+bubble_model2d <- glm(bubble ~ house_prices + houses_built, bubble_data, family = binomial(link = 'logit'))
+
+summary(bubble_model2d)
+```
+
+
+
+
+```{r}
+bubble_model3 <- glm(bubble ~ mortgage_ratio_wages, bubble_data, family = binomial(link = 'logit'))
+
+summary(bubble_model3)
+
+```
+
+```{r}
+bubble_model3b <- glm(bubble ~ house_price_ratio_wages, bubble_data, family = binomial(link = 'logit'))
+
+summary(bubble_model3b)
+```
+
+```{r}
+bubble_model3c <- glm(bubble ~ houses_built, bubble_data, family = binomial(link = 'logit'))
+
+summary(bubble_model3c)
+```
+
+```{r}
+bubble_model4 <- glm(bubble ~ house_prices + houses_built, bubble_data, family = binomial(link = 'logit'))
+
+summary(bubble_model4)
+```
+
+```{r}
+bubble_model4b <- glm(bubble ~ mortgage_ratio_wages + house_price_ratio_wages + houses_built, bubble_data, family = binomial(link = 'logit'))
+
+summary(bubble_model4b)
+```
+
+```{r}
+bubble_data_test <- bubble_data %>% 
+  mutate(bubble = if_else(bubble == TRUE, "Yes", "No"))
+
+model_cv_2b <- train(bubble ~ house_prices + house_price_ratio_wages,
+               data = bubble_data_test,
+               trControl = train_control,
+               method = "glm",
+               family = binomial(link = 'logit'))
+```
+
+```{r}
+model_cv_2b$results
+```
+
+```{r}
+bubble_data_test <- bubble_data %>% 
+  mutate(bubble = if_else(bubble == TRUE, "Yes", "No"))
+
+model_cv_1 <- train(bubble ~ house_prices,
+               data = bubble_data_test,
+               trControl = train_control,
+               method = "glm",
+               family = binomial(link = 'logit'))
+```
+
+```{r}
+model_cv_1$results
+```
+
+```{r}
+bubble_data_test <- bubble_data %>% 
+  mutate(bubble = if_else(bubble == TRUE, "Yes", "No"))
+
+model_cv_4b <- train(bubble ~ mortgage_ratio_wages + house_price_ratio_wages + houses_built,
+               data = bubble_data_test,
+               trControl = train_control,
+               method = "glm",
+               family = binomial(link = 'logit'))
+
+model_cv_4b$results
+
+```
+
+```{r}
+library(tidyverse)
+
+bubble_data_pred_all <- read_csv("../clean data/bubble_data_prediction.csv")
+
+bubble_data_pred <- bubble_data_pred_all %>% 
+  select(c(mortgage_ratio_wages, house_price_ratio_wages, houses_built)) 
+
+bubble_data_pred_2022 <- read_csv("../clean data/bubble_data_prediction_2022.csv")
+  
+bubble_data_pred_hp <- bubble_data_pred_2022 %>% 
+  select(house_prices) 
+
+bubble_data_pred_hp_hb <- bubble_data_pred_2022 %>% 
+  select(c(mortgage_ratio_wages, house_price_ratio_wages, houses_built)) 
+
+bubble_pred_2b <- bubble_data_pred_2022 %>% 
+  select(house_prices, house_price_ratio_wages)
+  
+model2_predictions <- predict(bubble_model2, newdata = bubble_data_pred_hp, type = "response")
+
+model2b_predictions <- predict(bubble_model2b, newdata = bubble_pred_2b, type = "response")
+
+model4_predictions <- predict(bubble_model4, newdata = bubble_data_pred_hp_hb, type = "response")
+
+model4b_predictions <- predict(bubble_model4b, newdata = bubble_data_pred_hp_hb, type = "response")
+
+```
+
+
+
+
+```{r}
+price_change_data <- bubble_data %>% 
+  select(-bubble) %>% 
+  mutate(next_year_change = lead(house_prices)) %>% 
+  select(-house_prices) 
+```
+
+```{r}
+price_change_model <- lm(next_year_change ~ ., price_change_data)
+
+summary(price_change_model)
+```
+
+```{r}
+library(glmulti)
+glmulti_fit <- glmulti(
+  next_year_change ~ ., 
+  data = price_change_data, 
+  level = 2, # 2 = include pairwise interactions, 1 = main effects only (main effect = no pairwise interactions)
+  minsize = 0, # no min size of model
+  maxsize = -1, # -1 = no max size of model
+  marginality = TRUE, # marginality here means the same as 'strongly hierarchical' interactions, i.e. include pairwise interactions only if both predictors present in the model as main effects.
+  method = "h", # the problem is too large for exhaustive search, so search using a genetic algorithm
+  crit = bic, # criteria for model selection is BIC value (lower is better)
+  plotty = FALSE, # don't plot models as function runs
+  report = TRUE, # do produce reports as function runs
+  confsetsize = 100, # return best 100 solutions
+  fitfunction = lm # fit using the `lm` function
+)
+```
+
+```{r}
+prices_change_model2b <- lm(next_year_change ~ money_supply+houses_built+interest_rates+gdp+house_price_ratio_wages+interest_rates:houses_built+gdp:houses_built+house_price_ratio_wages:houses_built, price_change_data)
+
+summary(prices_change_model2b)
+```
+
+
+```{r}
+prices_change_model2c <- lm(next_year_change~disposable_income+money_supply+houses_built+interest_rates+house_price_ratio_wages+mortgage_interest+houses_built:disposable_income+interest_rates:money_supply+interest_rates:houses_built+house_price_ratio_wages:disposable_income, price_change_data)
+
+summary(prices_change_model2c)
+```
+
+
+
+```{r}
+prices_change_model2 <- lm(next_year_change~disposable_income+gdp+mortgage_interest+mortgage_ratio_wages, price_change_data)
+
+summary(prices_change_model2)
+```
+
+```{r}
+library(modelr)
+
+price_change_model_plot <- bubble_data_all %>% 
+  select(-bubble) %>% 
+  mutate(next_year_change = lead(house_prices)) %>%
+  add_predictions(price_change_model) %>% 
+  add_residuals(price_change_model)
+
+
+price_change_model_plot %>% 
+  ggplot(aes(x = year, y = pred)) + 
+  geom_line(col = "red") +
+  geom_line(aes(y = next_year_change)) +
+  theme_minimal() +
+  labs(title = "Housing Prices Change Model", y = "Housing Prices % Change", x = "Year") +
+  geom_hline(yintercept=0, linetype = "dotted") +
+  geom_vline(xintercept = c(1987, 1989, 2002, 2007), color = "red", linetype = "dotted")+
+  geom_text(data=annotation, aes(x=c(1990, 2004.5), y=c(21, 21), label=c("Bubble Years 87-89", "Bubble Years 02-07")),                 , 
+           color="red", 
+           size=4)
+```
+
+
+```{r}
+price_change_model_plot2c <- bubble_data_all %>% 
+  select(-bubble) %>% 
+  mutate(next_year_change = lead(house_prices)) %>%
+  add_predictions(prices_change_model2c) %>% 
+  add_residuals(prices_change_model2c)
+
+
+price_change_model_plot2c %>% 
+  ggplot(aes(x = year, y = pred)) + 
+  geom_line(col = "red") +
+  geom_line(aes(y = next_year_change)) +
+  labs(title = "Housing Prices Change Model", y = "Housing Prices Change %", x = "Year") +
+  theme_minimal() +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  labs(caption = "Adjusted R-squared:  0.8565")
+```
+
+
+
+
+```{r}
+
+model_kfold_hp_change <- train(next_year_change~disposable_income+money_supply+houses_built+interest_rates+house_price_ratio_wages+mortgage_interest+houses_built:disposable_income+interest_rates:money_supply+interest_rates:houses_built+house_price_ratio_wages:disposable_income,
+               data = price_change_data,
+               trControl = cv_10_fold, # use options defined above
+               method = 'lm',
+               na.action = na.omit)
+
+model_kfold_hp_change$results$RMSE
+```
+
+
+```{r}
+price_change_model_plot_2022 <- bubble_data_pred_all %>% 
+  mutate(next_year_change = lead(house_prices)) %>%
+  add_predictions(price_change_model) %>% 
+  add_residuals(price_change_model) %>% 
+  mutate(next_year_change = if_else(is.na(next_year_change), 9.775, next_year_change)) #impute value lost from lag
+
+
+price_change_model_plot_2022 %>% 
+  ggplot(aes(x = year, y = pred)) + 
+  geom_line(col = "red") +
+  geom_line(aes(y = next_year_change))
+```
+
+
+```{r}
+price_change_model_plot_2022c <- bubble_data_all_viz %>% 
+  mutate(next_year_change = lead(house_prices)) %>%
+  add_predictions(prices_change_model2c) %>% 
+  add_residuals(prices_change_model2c) %>% 
+  mutate(next_year_change = if_else(is.na(next_year_change), 9.775, next_year_change)) #impute value lost from lag
+
+
+price_change_model_plot_2022c %>% 
+  ggplot(aes(x = year, y = pred)) + 
+  geom_line(col = "red") +
+  geom_line(aes(y = next_year_change)) + 
+  xlim(2017, 2021) +
+  labs(title = "Housing Prices Change Predictions", y = "Housing Prices Change %", x = "Year") +
+  theme_minimal() +
+  geom_hline(yintercept = 0, linetype = "dotted") 
+```
+

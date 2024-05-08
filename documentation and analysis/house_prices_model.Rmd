@@ -1,0 +1,358 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+housing_prices <- read_csv("../clean data/housing_prices_data.csv")
+```
+```{r}
+housing_prices_data <- housing_prices %>% 
+  mutate(rel_wealth = wages / gdp_ph)
+```
+
+
+```{r}
+library(GGally)
+housing_prices_data %>% 
+  select(-year) %>% 
+  select(housing_prices, everything()) %>% 
+  ggpairs()
+```
+```{r}
+skimr::skim(housing_prices_data)
+```
+
+```{r}
+housing_prices_BN <- bestNormalize::bestNormalize(housing_prices_data$housing_prices, loo = TRUE)
+
+gdp_BN <- bestNormalize::bestNormalize(housing_prices_data$gdp_ph, loo = TRUE)
+```
+
+
+
+```{r}
+housing_prices_data %>% 
+  ggplot(aes(x = year, y = housing_prices)) +
+  geom_line()
+```
+
+```{r}
+model <- lm(housing_prices ~ ., housing_prices_data)
+
+summary(model)
+```
+
+```{r}
+library(GGally)
+library(ggfortify)
+autoplot(model)
+```
+
+```{r}
+model2 <- lm(housing_prices_BN$x.t ~ gdp_ph, housing_prices_data)
+
+summary(model2)
+```
+
+```{r}
+autoplot(model2)
+```
+
+```{r}
+model2b <- lm(housing_prices_BN$x.t ~ gdp_BN$x.t, housing_prices_data)
+
+summary(model2b)
+```
+```{r}
+autoplot(model2b)
+```
+
+```{r}
+model2c <- lm(housing_prices ~ gdp_ph, housing_prices_data)
+
+summary(model2c)
+```
+
+
+
+
+```{r}
+library(modelr)
+
+model_plot <- housing_prices_data %>% 
+  select(everything())
+
+model_plot <- model_plot%>% 
+  add_predictions(model2c) %>% 
+  add_residuals(model2c)
+```
+
+```{r}
+model_plot %>% 
+  ggplot(aes(x = year)) +
+  geom_point(aes(y = housing_prices)) +
+  geom_line(aes(y = pred), col = "red")
+```
+
+```{r}
+model3 <- lm(housing_prices ~ gdp_ph + wages, housing_prices_data)
+
+summary(model3)
+```
+
+```{r}
+autoplot(model3)
+```
+
+```{r}
+model_plot3 <- housing_prices_data %>% 
+  select(everything())
+
+model_plot3 <- model_plot%>% 
+  add_predictions(model3) %>% 
+  add_residuals(model3)
+```
+
+```{r}
+model_plot3 %>% 
+  ggplot(aes(x = year)) +
+  geom_point(aes(y = housing_prices)) +
+  geom_line(aes(y = pred), col = "red")
+```
+
+```{r}
+housing_prices_data %>% 
+  select(housing_prices, rel_wealth) %>% 
+  ggpairs()
+```
+
+```{r}
+model4 <- lm(housing_prices ~ gdp_ph + wages + credit, housing_prices_data)
+
+summary(model4)
+```
+
+```{r}
+autoplot(model4)
+```
+
+```{r}
+model_plot4 <- housing_prices_data %>% 
+  select(everything())
+
+model_plot4 <- model_plot4%>% 
+  add_predictions(model4) %>% 
+  add_residuals(model4)
+```
+
+```{r}
+model_plot4 %>% 
+  ggplot(aes(x = year)) +
+  geom_point(aes(y = housing_prices)) +
+  geom_line(aes(y = pred), col = "red")
+```
+```{r}
+model4b <- lm(housing_prices ~ wages + rel_wealth, housing_prices_data)
+
+summary(model4b)
+```
+```{r}
+autoplot(model4b)
+```
+```{r}
+model_plot4b <- housing_prices_data %>% 
+  select(everything())
+
+model_plot4b <- model_plot4b%>% 
+  add_predictions(model4b) %>% 
+  add_residuals(model4b)
+```
+
+```{r}
+model_plot4 %>% 
+  ggplot(aes(x = year)) +
+  geom_point(aes(y = housing_prices)) +
+  geom_line(aes(y = pred), col = "red")
+```
+
+```{r}
+housing_prices_data %>% 
+  select(-c(year, gdp_ph, rel_wealth, wages)) %>% 
+  select(housing_prices, everything()) %>% 
+  ggpairs()
+```
+```{r}
+model5 <- lm(housing_prices ~ gdp_ph + wages + rel_wealth + construction_wages, housing_prices_data)
+
+summary(model5)
+```
+
+```{r}
+model5b <- lm(housing_prices ~ gdp_ph + wages + rel_wealth + money_supply, housing_prices_data)
+
+summary(model5b)
+```
+
+```{r}
+model5c <- lm(housing_prices ~ gdp_ph + wages + rel_wealth + disposable_income, housing_prices_data)
+
+summary(model5c)
+```
+
+```{r}
+model5d <- lm(housing_prices ~ gdp_ph + rel_wealth + disposable_income, housing_prices_data)
+
+summary(model5d)
+```
+```{r}
+autoplot(model5d)
+```
+
+
+```{r}
+library(glmulti)
+glmulti_fit <- glmulti(
+  housing_prices ~ ., 
+  data = housing_prices_data,
+  level = 1, # 2 = include pairwise interactions, 1 = main effects only (main effect = no pairwise interactions)
+  minsize = 0, # no min size of model
+  maxsize = -1, # -1 = no max size of model
+  marginality = TRUE, # marginality here means the same as 'strongly hierarchical' interactions, i.e. include pairwise interactions only if both predictors present in the model as main effects.
+  method = "h", # the problem is too large for exhaustive search, so search using a genetic algorithm
+  crit = bic, # criteria for model selection is BIC value (lower is better)
+  plotty = FALSE, # don't plot models as function runs
+  report = TRUE, # do produce reports as function runs
+  confsetsize = 100, # return best 100 solutions
+  fitfunction = lm # fit using the `lm` function
+)
+```
+
+
+
+```{r}
+model7 <- lm(housing_prices ~ money_supply + wages + rel_wealth, housing_prices_data)
+
+summary(model7)
+```
+
+Choosing model 7 since i have more data for the variables and there is only a small difference between the model from glmulti
+
+```{r}
+autoplot(model7)
+```
+
+
+
+```{r}
+library(caret)
+
+# set up options for train function below
+cv_10_fold <- trainControl(method = "cv", # cross-validation
+                           number = 10, # 10-fold
+                           savePredictions = TRUE) # save all predictions
+
+model_kfolda <- train(housing_prices ~ money_supply + wages + rel_wealth,
+               data = housing_prices_data,
+               trControl = cv_10_fold, # use options defined above
+               method = 'lm')
+```
+
+```{r}
+model_kfolda$resample
+
+mean(model_kfolda$resample$RMSE)
+```
+
+```{r}
+library(caret)
+
+# set up options for train function below
+cv_10_fold <- trainControl(method = "cv", # cross-validation
+                           number = 10, # 10-fold
+                           savePredictions = TRUE) # save all predictions
+
+model_kfoldb <- train(housing_prices ~ gdp_ph + rel_wealth + disposable_income,
+               data = housing_prices_data,
+               trControl = cv_10_fold, # use options defined above
+               method = 'lm')
+```
+
+```{r}
+model_kfoldb$resample
+```
+
+```{r}
+mean(model_kfoldb$resample$RMSE)
+```
+
+```{r}
+model_plot7 <- housing_prices_data %>% 
+  select(everything())
+
+model_plot7 <- model_plot7%>% 
+  add_predictions(model7) %>% 
+  add_residuals(model7)
+```
+
+```{r}
+model_plot7 %>% 
+  ggplot(aes(x = year)) +
+  geom_point(aes(y = housing_prices)) +
+  geom_line(aes(y = pred), col = "red")
+```
+
+```{r}
+housing_prices_pred <- read_csv("../clean data/housing_prices_data_pred.csv")
+```
+
+```{r}
+housing_prices_predictors <- housing_prices_pred %>% 
+  mutate(rel_wealth = wages / gdp) %>% 
+  select(money_supply, wages, rel_wealth)
+```
+
+```{r}
+predictions <- predict(model7, newdata = housing_prices_predictors)
+
+
+predictions_plot <- tibble(year = 2018:2021, housing_prices = predictions) 
+```
+
+```{r}
+actual_prices <- housing_prices_pred$housing_prices
+```
+
+
+```{r}
+predictions_plot %>% 
+  ggplot(aes(x = year, y = housing_prices, col = "red")) +
+  geom_line() + 
+  geom_line(aes(y = actual_prices), col = "black") +
+  labs(title = "Housing Prices Prediction", y = "Housing Prices", x = "Year") +
+  theme_minimal()+
+  theme(legend.position = "none") 
+  
+```
+
+```{r}
+cv_10_fold <- trainControl(method = "cv", # cross-validation
+                           number = 10, # 10-fold
+                           savePredictions = TRUE) # save all predictions
+
+housing_prices_pred <- housing_prices_pred %>% 
+  mutate(rel_wealth = wages / gdp)
+
+model_kfold_pred <- train(housing_prices ~ money_supply + wages + rel_wealth ,
+               data = housing_prices_pred,
+               trControl = cv_10_fold, # use options defined above
+               method = 'lm')
+```
+```{r}
+
+model_kfold_pred$resample$RMSE
+
+mean(model_kfold_pred$resample$RMSE)
+```
+
